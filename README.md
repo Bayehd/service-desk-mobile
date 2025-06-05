@@ -1,5 +1,5 @@
 # service desk-mobile
-A mobile application built for managing IT support and repair requests. 
+A mobile application built for managing IT support and repair requests.Users can submit issues, track request status, view service history, and receive updates in real time. Designed for quick reporting and efficient communication between users and service technicians. 
 
 Key Features:
 
@@ -19,8 +19,6 @@ React Native / Expo
 
 Firebase / REST API backend
 
-React Navigation
-
-Tailwind CSS 
+React Navigation 
 
 Axios / Fetch for API communication
