@@ -288,20 +288,17 @@ export default function RequestDetailsScreen() {
             />
             {showRequesterSuggestions && !isEditMode && (
               <View style={styles.suggestionsContainer}>
-                <FlatList
-                  data={filteredRequesters}
-                  keyExtractor={(item) => item}
-                  renderItem={({ item }) => (
+                <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
+                  {filteredRequesters.map((item) => (
                     <TouchableOpacity
+                      key={item}
                       style={styles.suggestionItem}
                       onPress={() => selectRequester(item)}
                     >
                       <Text>{item}</Text>
                     </TouchableOpacity>
-                  )}
-                  nestedScrollEnabled={true}
-                  style={{ maxHeight: 150 }}
-                />
+                  ))}
+                </ScrollView>
               </View>
             )}
           </View>
@@ -314,51 +311,59 @@ export default function RequestDetailsScreen() {
             value={requestDetails.description}
             editable={!isEditMode}
             onChangeText={(text) => setRequestDetails((prev) => ({ ...prev, description: text }))}
+            numberOfLines={4}
+            textAlignVertical="top"
           />
 
-          <View style={{ zIndex: 4000, marginTop: 20 }}>
-            <Text style={styles.label}>Assigned to</Text>
-            <DropDownPicker
-              open={openTechnician}
-              value={requestDetails.technician}
-              items={technicianOptions}
-              setOpen={setOpenTechnician}
-              setValue={(callback) => {
-                const value = typeof callback === "function" ? callback(requestDetails.technician) : callback;
-                setRequestDetails((prev) => ({ ...prev, technician: value }));
-              }}
-              placeholder="Select technician"
-              zIndex={4000}
-              listMode="MODAL"
-              disabled={!isAdmin || !isEditMode}
-              style={!isAdmin || !isEditMode ? styles.disabledDropdown : {}}
-            />
-            {(!isAdmin || !isEditMode) && (
-              <Text style={styles.infoText}>Only admins can assign technicians</Text>
-            )}
-          </View>
+          {/* Only show Assigned to field for admins */}
+          {isAdmin && (
+            <View style={{ zIndex: 4000, marginTop: 20 }}>
+              <Text style={styles.label}>Assigned to</Text>
+              <DropDownPicker
+                open={openTechnician}
+                value={requestDetails.technician}
+                items={technicianOptions}
+                setOpen={setOpenTechnician}
+                setValue={(callback) => {
+                  const value = typeof callback === "function" ? callback(requestDetails.technician) : callback;
+                  setRequestDetails((prev) => ({ ...prev, technician: value }));
+                }}
+                placeholder="Select technician"
+                zIndex={4000}
+                listMode="MODAL"
+                disabled={!isEditMode}
+                style={!isEditMode ? styles.disabledDropdown : {}}
+              />
+              {!isEditMode && (
+                <Text style={styles.infoText}>Only available when editing requests</Text>
+              )}
+            </View>
+          )}
 
-          <View style={{ zIndex: 3000, marginTop: 10 }}>
-            <Text style={styles.label}>Status</Text>
-            <DropDownPicker
-              open={openStatus}
-              value={requestDetails.status}
-              items={statusOptions}
-              setOpen={setOpenStatus}
-              setValue={(callback) => {
-                const value = typeof callback === "function" ? callback(requestDetails.status) : callback;
-                setRequestDetails((prev) => ({ ...prev, status: value }));
-              }}
-              placeholder="Select status"
-              zIndex={3000}
-              listMode="MODAL"
-              disabled={!isAdmin || !isEditMode}
-              style={!isAdmin || !isEditMode ? styles.disabledDropdown : {}}
-            />
-            {(!isAdmin || !isEditMode) && (
-              <Text style={styles.infoText}>Only admins can change status</Text>
-            )}
-          </View>
+          {/* Only show Status field for admins */}
+          {isAdmin && (
+            <View style={{ zIndex: 3000, marginTop: 10 }}>
+              <Text style={styles.label}>Status</Text>
+              <DropDownPicker
+                open={openStatus}
+                value={requestDetails.status}
+                items={statusOptions}
+                setOpen={setOpenStatus}
+                setValue={(callback) => {
+                  const value = typeof callback === "function" ? callback(requestDetails.status) : callback;
+                  setRequestDetails((prev) => ({ ...prev, status: value }));
+                }}
+                placeholder="Select status"
+                zIndex={3000}
+                listMode="MODAL"
+                disabled={!isEditMode}
+                style={!isEditMode ? styles.disabledDropdown : {}}
+              />
+              {!isEditMode && (
+                <Text style={styles.infoText}>Only available when editing requests</Text>
+              )}
+            </View>
+          )}
 
           <View style={{ zIndex: 2000, marginTop: 10 }}>
             <Text style={styles.label}>Priority</Text>
@@ -374,11 +379,11 @@ export default function RequestDetailsScreen() {
               placeholder="Select priority"
               zIndex={2000}
               listMode="MODAL"
-              disabled={!isAdmin || !isEditMode}
-              style={!isAdmin || !isEditMode ? styles.disabledDropdown : {}}
+              disabled={isAdmin ? !isEditMode : false}
+              style={isAdmin && !isEditMode ? styles.disabledDropdown : {}}
             />
-            {(!isAdmin || !isEditMode) && (
-              <Text style={styles.infoText}>Only admins can change priority</Text>
+            {isAdmin && !isEditMode && (
+              <Text style={styles.infoText}>Only available when editing requests</Text>
             )}
           </View>
           
@@ -456,7 +461,8 @@ const styles = StyleSheet.create({
     opacity: 0.7
   },
   descriptionInput: {
-    height: 100,
+    minHeight: 100,
+    maxHeight: 200,
     textAlignVertical: "top"
   },
   saveButton: {
