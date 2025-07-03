@@ -1,6 +1,7 @@
 import "react-native-gesture-handler";
 import { Drawer } from "expo-router/drawer";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Octicons from '@expo/vector-icons/Octicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { StyleSheet } from "react-native";
 import CustomDrawerContent from "@/components/CustomDrawerContent";
@@ -21,16 +22,22 @@ export default function  DrawerLayout() {
                     drawerIcon: ({ size, color}) => <AntDesign name="filetext1" size={size} color={color} />,
                 }}
               />
-
                 <Drawer.Screen name= "addRequests" 
                 options = {{ 
                     drawerLabel : " Add Requests", 
                     headerTitle : "Request Details",
-                    drawerIcon: ({ size, color}) => <AntDesign name="plus"  size={size} />,
+                    drawerIcon: ({ size, color}) => <AntDesign name="plus"  size={size} color={color} />,
+                }}
+              />
+                  <Drawer.Screen name= "serviceBot" 
+                options = {{ 
+                    drawerLabel : " Service Bot", 
+                    headerTitle : " Service Bot",
+                    drawerIcon: ({ size, color}) => <Octicons name="dependabot" size={size} color={color} />,
                 }}
               />
 
-          <Drawer.Screen name= "Reports" 
+              <Drawer.Screen name= "Reports" 
                 options = {{ 
                     drawerLabel : "Reports",
                     headerTitle : "Report Information",
