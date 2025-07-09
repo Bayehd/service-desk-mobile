@@ -61,7 +61,7 @@ export default function CustomDrawerContent(props: any) {
           <Text style={{ fontSize: 16, fontWeight: "bold", marginTop: 10 }}>
             {displayName}
           </Text>
-          <Text style={{ fontSize: 14, color: "#1c3367" }}>{userEmail}</Text>
+          <Text style={{ fontSize: 14, color: "#fff" }}>{userEmail}</Text>
         </View>
 
         <DrawerItemList {...props} />

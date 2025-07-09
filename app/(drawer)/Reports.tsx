@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
+import { ThemedText } from "@/components/themedText";
+import { ThemedView } from "@/components/themedView";
+import { Colors } from "@/constants/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/config/firebase';
 import { useAuth } from '../../context/authContext'; 
@@ -24,11 +28,13 @@ interface StatCardProps {
   onPress: () => void;
   isActive: boolean;
   isAdmin: boolean;
+  colorScheme: 'light' | 'dark';
 }
 
 type FilterType = 'total' | 'open' | 'closed' | 'resolved' | 'unassigned' | 'highPriority' | null;
 
 export default function ReportsScreen() {
+  const colorScheme = useColorScheme() ?? "light";
   const { isAdmin } = useAuth(); 
   const [timeframe, setTimeframe] = useState('weekly');
   const [requests, setRequests] = useState<Request[]>([]);
@@ -133,13 +139,17 @@ export default function ReportsScreen() {
     }
   }, [activeFilter, timeframe, requests]);
 
-  const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, onPress, isActive, isAdmin }) => (
+  const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, onPress, isActive, isAdmin, colorScheme }) => (
     <TouchableOpacity 
       style={[
-        styles.card, 
-        { borderLeftColor: color },
-        isActive && styles.activeCard,
-        !isAdmin && styles.nonAdminCard
+        styles.card,
+        { 
+          borderLeftColor: color,
+          backgroundColor: Colors[colorScheme].background,
+          shadowColor: Colors[colorScheme].text
+        },
+        isActive && { backgroundColor: Colors[colorScheme].backgroundTint, shadowOpacity: 0.2 },
+        !isAdmin && { opacity: 0.85 }
       ]}
       onPress={isAdmin ? onPress : undefined}
       disabled={!isAdmin}
@@ -148,12 +158,12 @@ export default function ReportsScreen() {
     >
       <View style={styles.cardHeader}>
         <Ionicons name={icon} size={24} color={color} />
-        <Text style={styles.cardValue}>{value}</Text>
+        <ThemedText style={styles.cardValue}>{value}</ThemedText>
       </View>
-      <Text style={styles.cardTitle}>{title}</Text>
+      <ThemedText style={styles.cardTitle}>{title}</ThemedText>
       {!isAdmin && (
         <View style={styles.lockIconContainer}>
-          <Ionicons name="lock-closed" size={14} color="#999" />
+          <Ionicons name="lock-closed" size={14} color={Colors[colorScheme].placeholder} />
         </View>
       )}
     </TouchableOpacity>
@@ -186,33 +196,33 @@ export default function ReportsScreen() {
     };
 
     return (
-      <View style={styles.requestItem}>
+      <View style={[styles.requestItem, { backgroundColor: Colors[colorScheme].background }]}>
         <View style={styles.requestHeader}>
-          <Text style={styles.requestTitle}>{item.title}</Text>
+          <ThemedText style={styles.requestTitle}>{item.title}</ThemedText>
           <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(item.priority) }]}>
-            <Text style={styles.priorityText}>{item.priority || 'N/A'}</Text>
+            <ThemedText style={styles.priorityText}>{item.priority || 'N/A'}</ThemedText>
           </View>
         </View>
         
         <View style={styles.requestDetails}>
           <View style={styles.requestDetail}>
-            <Ionicons name="person" size={16} color="#666" />
-            <Text style={styles.requestDetailText}>{item.requester}</Text>
+            <Ionicons name="person" size={16} color={Colors[colorScheme].icon} />
+            <ThemedText style={styles.requestDetailText}>{item.requester}</ThemedText>
           </View>
           
           <View style={styles.requestDetail}>
-            <Ionicons name="calendar" size={16} color="#666" />
-            <Text style={styles.requestDetailText}>{formattedDate}</Text>
+            <Ionicons name="calendar" size={16} color={Colors[colorScheme].icon} />
+            <ThemedText style={styles.requestDetailText}>{formattedDate}</ThemedText>
           </View>
           
           <View style={styles.requestDetail}>
-            <Ionicons name={getStatusIcon(item.status)} size={16} color="#666" />
-            <Text style={styles.requestDetailText}>{item.status}</Text>
+            <Ionicons name={getStatusIcon(item.status)} size={16} color={Colors[colorScheme].icon} />
+            <ThemedText style={styles.requestDetailText}>{item.status}</ThemedText>
           </View>
           
           <View style={styles.requestDetail}>
-            <Ionicons name="construct" size={16} color="#666" />
-            <Text style={styles.requestDetailText}>{item.technician || 'Unassigned'}</Text>
+            <Ionicons name="construct" size={16} color={Colors[colorScheme].icon} />
+            <ThemedText style={styles.requestDetailText}>{item.technician || 'Unassigned'}</ThemedText>
           </View>
         </View>
       </View>
@@ -220,11 +230,9 @@ export default function ReportsScreen() {
   };
 
   const handleCardPress = (filterType: FilterType) => {
-  
     if (!isAdmin) return;
 
     if (activeFilter === filterType) {
-      // If clicking the already active filter, clear it
       setActiveFilter(null);
     } else {
       setActiveFilter(filterType);
@@ -246,14 +254,14 @@ export default function ReportsScreen() {
     
     return (
       <View style={styles.listHeader}>
-        <Text style={styles.listHeaderTitle}>{title} ({filteredRequests.length})</Text>
+        <ThemedText style={styles.listHeaderTitle}>{title} ({filteredRequests.length})</ThemedText>
         <TouchableOpacity 
           style={styles.clearFilterButton}
           onPress={() => setActiveFilter(null)}
           accessibilityLabel="Clear filter"
           accessibilityHint="Removes the current filter"
         >
-          <Ionicons name="close-circle" size={20} color="#666" />
+          <Ionicons name="close-circle" size={20} color={Colors[colorScheme].icon} />
         </TouchableOpacity>
       </View>
     );
@@ -261,20 +269,22 @@ export default function ReportsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#106ebe" />
-        <Text style={styles.loadingText}>Loading reports...</Text>
-      </View>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
+        <ThemedText style={[styles.loadingText, { color: Colors[colorScheme].primary }]}>
+          Loading reports...
+        </ThemedText>
+      </ThemedView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle" size={48} color="#F44336" />
-        <Text style={styles.errorText}>{error}</Text>
+      <ThemedView style={styles.errorContainer}>
+        <Ionicons name="alert-circle" size={48} color={Colors[colorScheme].error} />
+        <ThemedText style={[styles.errorText, { color: Colors[colorScheme].error }]}>{error}</ThemedText>
         <TouchableOpacity 
-          style={styles.retryButton}
+          style={[styles.retryButton, { backgroundColor: Colors[colorScheme].primary }]}
           onPress={() => {
             setError(null);
             setLoading(true);
@@ -282,31 +292,47 @@ export default function ReportsScreen() {
           accessibilityLabel="Retry loading"
           accessibilityHint="Attempts to load reports again"
         >
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <ThemedText style={styles.retryButtonText}>Retry</ThemedText>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <ThemedView style={styles.container}>
+      <View style={[styles.header, { backgroundColor: Colors[colorScheme].primary }]}>
         <View style={styles.timeframeContainer}>
           <TouchableOpacity
-            style={[styles.timeframeButton, timeframe === 'weekly' && styles.activeTimeframe]}
+            style={[
+              styles.timeframeButton,
+              timeframe === 'weekly' && { backgroundColor: Colors[colorScheme].background }
+            ]}
             onPress={() => setTimeframe('weekly')}
             accessibilityLabel="Weekly timeframe"
             accessibilityState={{ selected: timeframe === 'weekly' }}
           >
-            <Text style={[styles.timeframeText, timeframe === 'weekly' && styles.activeTimeframeText]}>Weekly</Text>
+            <ThemedText style={[
+              styles.timeframeText,
+              timeframe === 'weekly' && { color: Colors[colorScheme].primary }
+            ]}>
+              Weekly
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.timeframeButton, timeframe === 'monthly' && styles.activeTimeframe]}
+            style={[
+              styles.timeframeButton,
+              timeframe === 'monthly' && { backgroundColor: Colors[colorScheme].background }
+            ]}
             onPress={() => setTimeframe('monthly')}
             accessibilityLabel="Monthly timeframe"
             accessibilityState={{ selected: timeframe === 'monthly' }}
           >
-            <Text style={[styles.timeframeText, timeframe === 'monthly' && styles.activeTimeframeText]}>Monthly</Text>
+            <ThemedText style={[
+              styles.timeframeText,
+              timeframe === 'monthly' && { color: Colors[colorScheme].primary }
+            ]}>
+              Monthly
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -318,10 +344,11 @@ export default function ReportsScreen() {
               title="Total Requests"
               value={statistics.total}
               icon="documents"
-              color="#106ebe"
+              color={Colors[colorScheme].primary}
               onPress={() => handleCardPress('total')}
               isActive={activeFilter === 'total'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
             <StatCard
               title="Open"
@@ -331,6 +358,7 @@ export default function ReportsScreen() {
               onPress={() => handleCardPress('open')}
               isActive={activeFilter === 'open'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
             <StatCard
               title="Closed"
@@ -340,6 +368,7 @@ export default function ReportsScreen() {
               onPress={() => handleCardPress('closed')}
               isActive={activeFilter === 'closed'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
             <StatCard
               title="Resolved"
@@ -349,6 +378,7 @@ export default function ReportsScreen() {
               onPress={() => handleCardPress('resolved')}
               isActive={activeFilter === 'resolved'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
             <StatCard
               title="Unassigned"
@@ -358,6 +388,7 @@ export default function ReportsScreen() {
               onPress={() => handleCardPress('unassigned')}
               isActive={activeFilter === 'unassigned'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
             <StatCard
               title="High Priority"
@@ -367,22 +398,23 @@ export default function ReportsScreen() {
               onPress={() => handleCardPress('highPriority')}
               isActive={activeFilter === 'highPriority'}
               isAdmin={isAdmin}
+              colorScheme={colorScheme}
             />
           </View>
 
           <View style={styles.timeframeInfo}>
-            <Ionicons name="information-circle" size={16} color="#666" style={styles.infoIcon} />
-            <Text style={styles.timeframeInfoText}>
+            <Ionicons name="information-circle" size={16} color={Colors[colorScheme].icon} style={styles.infoIcon} />
+            <ThemedText style={styles.timeframeInfoText}>
               Showing {timeframe === 'weekly' ? 'last 7 days' : 'last 30 days'} statistics
-            </Text>
+            </ThemedText>
           </View>
           
           {!isAdmin && (
-            <View style={styles.adminNoticeContainer}>
-              <Ionicons name="lock-closed" size={20} color="#666" />
-              <Text style={styles.adminNoticeText}>
+            <View style={[styles.adminNoticeContainer, { backgroundColor: Colors[colorScheme].backgroundTint, borderColor: Colors[colorScheme].border }]}>
+              <Ionicons name="lock-closed" size={20} color={Colors[colorScheme].icon} />
+              <ThemedText style={styles.adminNoticeText}>
                 Admin access required to view detailed requests
-              </Text>
+              </ThemedText>
             </View>
           )}
           
@@ -397,8 +429,8 @@ export default function ReportsScreen() {
                 scrollEnabled={false}
                 ListEmptyComponent={
                   <View style={styles.emptyListContainer}>
-                    <Ionicons name="document" size={32} color="#bbb" />
-                    <Text style={styles.emptyListText}>No requests found</Text>
+                    <Ionicons name="document" size={32} color={Colors[colorScheme].placeholder} />
+                    <ThemedText style={styles.emptyListText}>No requests found</ThemedText>
                   </View>
                 }
               />
@@ -406,25 +438,17 @@ export default function ReportsScreen() {
           )}
         </ScrollView>
       </View>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#106ebe',
     padding: 15,
     paddingTop: Platform.OS === 'ios' ? 50 : 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
   },
   timeframeContainer: {
     flexDirection: 'row',
@@ -438,17 +462,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 6,
   },
-  activeTimeframe: {
-    backgroundColor: 'white',
-  },
   timeframeText: {
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
-  },
-  activeTimeframeText: {
-    color: '#106ebe',
   },
   content: {
     flex: 1,
@@ -460,12 +478,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   card: {
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
     width: '48%',
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -475,15 +491,6 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderLeftWidth: 4,
     position: 'relative',
-  },
-  activeCard: {
-    backgroundColor: '#f0f7ff',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 8,
-  },
-  nonAdminCard: {
-    opacity: 0.85,
   },
   lockIconContainer: {
     position: 'absolute',
@@ -499,39 +506,33 @@ const styles = StyleSheet.create({
   cardValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   cardTitle: {
     fontSize: 14,
-    color: '#666',
+    opacity: 0.7,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
     fontSize: 16,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     padding: 20,
   },
   errorText: {
     marginTop: 10,
     marginBottom: 20,
-    color: '#666',
     fontSize: 16,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#106ebe',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -552,8 +553,8 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   timeframeInfoText: {
-    color: '#666',
     fontSize: 14,
+    opacity: 0.7,
   },
   listHeader: {
     flexDirection: 'row',
@@ -565,7 +566,6 @@ const styles = StyleSheet.create({
   listHeaderTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#444',
   },
   clearFilterButton: {
     padding: 5,
@@ -574,7 +574,6 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   requestItem: {
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 15,
     marginBottom: 10,
@@ -596,7 +595,6 @@ const styles = StyleSheet.create({
   requestTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     flex: 1,
     marginRight: 10,
   },
@@ -623,8 +621,8 @@ const styles = StyleSheet.create({
   },
   requestDetailText: {
     fontSize: 14,
-    color: '#666',
     marginLeft: 5,
+    opacity: 0.8,
   },
   emptyListContainer: {
     alignItems: 'center',
@@ -632,23 +630,21 @@ const styles = StyleSheet.create({
   },
   emptyListText: {
     marginTop: 10,
-    color: '#999',
     fontSize: 16,
+    opacity: 0.6,
   },
   adminNoticeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9f9f9',
     padding: 15,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   adminNoticeText: {
     marginLeft: 8,
-    color: '#666',
     fontSize: 14,
+    opacity: 0.7,
   },
 });

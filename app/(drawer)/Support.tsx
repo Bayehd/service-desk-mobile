@@ -1,33 +1,49 @@
-import { Image, StyleSheet, Text} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Image, StyleSheet } from "react-native";
+import { ThemedText } from "@/components/themedText";
+import { ThemedView } from "@/components/themedView";
+import { Colors } from "@/constants/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 const Page = () => {
+    const colorScheme = useColorScheme() ?? "light";
+    
     return (
-       <SafeAreaView>
-        <Text style ={styles.textStyle}>
+       <ThemedView style={styles.container}>
+        <ThemedText style={[styles.textStyle, { color: Colors[colorScheme].primary }]}>
              Call Service Desk Phone Number : " 1188 "
-        </Text>
+        </ThemedText>
         <Image
-                source= {require("../../assets/support.png")}
-                style={{
-                    width: '70%',
-                    height: '55%',
-                    justifyContent: 'center',
-                    marginLeft: 60,
-                    marginTop: 40
-                  }}
-                /> 
-       </SafeAreaView>
-    )
+                source={require("../../assets/support.png")}
+                style={[
+                    styles.supportImage,
+                    { 
+                        tintColor: colorScheme === 'dark' ? Colors[colorScheme].tint : undefined 
+                    }
+                ]}
+                />
+        </ThemedView>
+    );
 };
 
 export default Page;
 
 const styles = StyleSheet.create({
-    textStyle:{
-        fontWeight: "bold", 
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        paddingTop: 40,
+    },
+    textStyle: {
+        fontWeight: "bold",
         marginTop: 40,
         fontSize: 19,
-        color: "#106ebe" ,  
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    supportImage: {
+        width: '70%',
+        height: '55%',
+        marginTop: 40,
+        resizeMode: 'contain',
     }
 });

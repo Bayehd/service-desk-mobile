@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,9 +15,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier":  "com.serviceDesk.firebase",
-      "googleServiceFile": "./GoogleService-Info.plist"
-
+      "bundleIdentifier": "com.serviceDesk.firebase",
+      "googleServiceFile": "./GoogleService-Info.plist",
+      "userInterfaceStyle": "automatic"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,20 +25,22 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.serviceDesk.firebase",
-      "googleServiceFile": "./google-services.json"
+      "googleServiceFile": "./google-services.json",
+      "userInterfaceStyle": "automatic"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-     [
-      "expo-build-properties",{
-        "ios": {
-          "useFramework": "static"
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFramework": "static"
+          }
         }
-      }
-     ],
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/auth"
     ]

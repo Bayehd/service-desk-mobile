@@ -3,13 +3,15 @@ import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
+import { ThemedText } from "../components/themedText";
+import { ThemedView } from "../components/themedView";
+import { Colors } from "@/constants/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { auth, LoginSchema, LoginSchemaType, usersCollection } from "@/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
@@ -19,7 +21,8 @@ import { getDocs, query, where } from "firebase/firestore";
 import { useAuth, User } from "@/context/authContext";
 
 export default function AuthScreen() {
-  const {
+  const colorScheme = useColorScheme() ?? "dark";
+  const { 
     control,
     handleSubmit,
     formState: { errors },
@@ -71,7 +74,6 @@ export default function AuthScreen() {
     } catch (error: any) {
       console.error("Login error:", error);
       
-
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         Alert.alert(
           "Authentication Failed",
@@ -94,134 +96,141 @@ export default function AuthScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoidingContainer}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <ThemedView style={styles.container}>
+      <KeyboardAvoidingView
+        style={[styles.keyboardAvoidingContainer, { backgroundColor: Colors[colorScheme].background }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
-        <View style={styles.header}>
-          <Image source={require("../assets/loginn.png")} style={styles.image} />
-          <Text style={styles.title}>Service Desk</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <Controller
-            control={control}
-            rules={{
-              required: true,
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <View style={styles.inputContainer}>
-                <View style={[
-                  styles.textInputWrapper,
-                  errors.email && styles.inputError
-                ]}>
-                  <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Enter your email"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    style={styles.textInput}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    accessibilityLabel="Email input"
-                  />
-                </View>
-                {errors.email && (
-                  <Text style={styles.errorText}>
-                    {errors.email.message || "Email is required"}
-                  </Text>
-                )}
-              </View>
-            )}
-            name="email"
-          />
-
-          <Controller
-            control={control}
-            rules={{
-              required: true,
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <View style={styles.inputContainer}>
-                <View style={[
-                  styles.textInputWrapper,
-                  errors.password && styles.inputError
-                ]}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    secureTextEntry={!showPassword}
-                    placeholder="Enter password"
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    style={styles.textInput}
-                    accessibilityLabel="Password input"
-                  />
-                  <Pressable
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.passwordToggle}
-                    accessibilityLabel="Toggle password visibility"
-                  >
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color="#666"
-                    />
-                  </Pressable>
-                </View>
-                {errors.password && (
-                  <Text style={styles.errorText}>
-                    {errors.password.message || "Password is required"}
-                  </Text>
-                )}
-              </View>
-            )}
-            name="password"
-          />
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleSubmit(handleAuth)}
-            disabled={loading}
-            accessibilityLabel="Sign in button"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.buttonText}>SIGN IN</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push("/signup")}>
-              <Text style={styles.signupLink}>Sign up</Text>
-            </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContainer, { backgroundColor: Colors[colorScheme].background }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Image source={require("../assets/loginn.png")} style={styles.image} />
+            <ThemedText type="title" style={[styles.title, { color: Colors[colorScheme].primary }]}>Service Desk</ThemedText>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          <View style={styles.formContainer}>
+            <Controller
+              control={control}
+              rules={{
+                required: true,
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputContainer}>
+                  <View style={[
+                    styles.textInputWrapper,
+                    { backgroundColor: Colors[colorScheme].background, borderColor: Colors[colorScheme].border },
+                    errors.email && { borderColor: Colors[colorScheme].error }
+                  ]}>
+                    <Ionicons name="mail-outline" size={20} color={Colors[colorScheme].icon} style={styles.inputIcon} />
+                    <TextInput
+                      placeholder="Enter your email"
+                      placeholderTextColor={Colors[colorScheme].placeholder}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      style={[styles.textInput, { color: Colors[colorScheme].text }]}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      accessibilityLabel="Email input"
+                    />
+                  </View>
+                  {errors.email && (
+                    <ThemedText style={[styles.errorText, { color: Colors[colorScheme].error }]}>
+                      {errors.email.message || "Email is required"}
+                    </ThemedText>
+                  )}
+                </View>
+              )}
+              name="email"
+            />
+
+            <Controller
+              control={control}
+              rules={{
+                required: true,
+              }}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputContainer}>
+                  <View style={[
+                    styles.textInputWrapper,
+                    { backgroundColor: Colors[colorScheme].background, borderColor: Colors[colorScheme].border },
+                    errors.password && { borderColor: Colors[colorScheme].error }
+                  ]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={Colors[colorScheme].icon} style={styles.inputIcon} />
+                    <TextInput
+                      secureTextEntry={!showPassword}
+                      placeholder="Enter password"
+                      placeholderTextColor={Colors[colorScheme].placeholder}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      style={[styles.textInput, { color: Colors[colorScheme].text }]}
+                      accessibilityLabel="Password input"
+                    />
+                    <Pressable
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.passwordToggle}
+                      accessibilityLabel="Toggle password visibility"
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={Colors[colorScheme].icon}
+                      />
+                    </Pressable>
+                  </View>
+                  {errors.password && (
+                    <ThemedText style={[styles.errorText, { color: Colors[colorScheme].error }]}>
+                      {errors.password.message || "Password is required"}
+                    </ThemedText>
+                  )}
+                </View>
+              )}
+              name="password"
+            />
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: Colors[colorScheme].primary }]}
+              onPress={handleSubmit(handleAuth)}
+              disabled={loading}
+              accessibilityLabel="Sign in button"
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <ThemedText style={styles.buttonText}>SIGN IN</ThemedText>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.signupContainer}>
+              <ThemedText style={styles.signupText}>Don't have an account? </ThemedText>
+              <TouchableOpacity onPress={() => router.push("/signup")}>
+                <ThemedText style={[styles.signupLink, { color: Colors[colorScheme].primary }]}>Sign up</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   keyboardAvoidingContainer: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
-  container: {
+  scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#f8f9fa",
   },
   header: {
     alignItems: "center",
@@ -233,7 +242,6 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   title: {
-    color: "#106ebe",
     fontSize: 28,
     fontWeight: "900",
     marginTop: 10,
@@ -250,14 +258,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
-    backgroundColor: "#fff",
     paddingHorizontal: 10,
-  },
-  inputError: {
-    borderColor: "#e74c3c",
-    borderWidth: 1.5,
   },
   inputIcon: {
     marginRight: 10,
@@ -270,14 +272,12 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   errorText: {
-    color: "#e74c3c",
     fontSize: 12,
     marginTop: 5,
     marginLeft: 5,
   },
   button: {
     width: "90%",
-    backgroundColor: "#106ebe",
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
@@ -294,10 +294,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   signupText: {
-    color: "#666",
+    fontSize: 14,
   },
   signupLink: {
-    color: "#106ebe",
     fontWeight: "bold",
+    fontSize: 14,
   },
 });

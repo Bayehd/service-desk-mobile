@@ -5,6 +5,10 @@ import { collection, onSnapshot, deleteDoc, doc, query, orderBy, where } from 'f
 import { db } from '../../lib/config/firebase';
 import { useAuth } from '../../context/authContext';
 import { useRouter } from 'expo-router';
+import { ThemedText } from "@/components/themedText";
+import { ThemedView } from "@/components/themedView";
+import { Colors } from "@/constants/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 interface Request {
   id: string;
@@ -29,6 +33,7 @@ export default function RequestScreen() {
   
   const { user, isAdmin } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
 
   useEffect(() => {
     if (!user) {
@@ -119,17 +124,39 @@ export default function RequestScreen() {
   };
 
   const getStatusStyle = (status: string) => {
+    const baseStyle = {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginLeft: 8,
+    };
+    
     switch (status) {
       case 'Open':
-        return styles.statusOpen;
+        return { ...baseStyle, backgroundColor: Colors[colorScheme].statusOpen };
       case 'Closed':
-        return styles.statusClosed;
+        return { ...baseStyle, backgroundColor: Colors[colorScheme].statusClosed };
       case 'Resolved':
-        return styles.statusResolved;
+        return { ...baseStyle, backgroundColor: Colors[colorScheme].statusResolved };
       case 'Unassigned':
-        return styles.statusUnassigned;
+        return { ...baseStyle, backgroundColor: Colors[colorScheme].statusUnassigned };
       default:
-        return {};
+        return baseStyle;
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case 'Open':
+        return Colors[colorScheme].statusOpenText;
+      case 'Closed':
+        return Colors[colorScheme].statusClosedText;
+      case 'Resolved':
+        return Colors[colorScheme].statusResolvedText;
+      case 'Unassigned':
+        return Colors[colorScheme].statusUnassignedText;
+      default:
+        return Colors[colorScheme].text;
     }
   };
 
@@ -146,10 +173,12 @@ export default function RequestScreen() {
   
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <ThemedView style={styles.centerContainer}>
+        <Text style={[styles.errorText, { color: Colors[colorScheme].error }]}>
+          {error}
+        </Text>
         <TouchableOpacity
-          style={styles.retryButton}
+          style={[styles.retryButton, { backgroundColor: Colors[colorScheme].primary }]}
           onPress={() => {
             setError(null);
             setLoading(true);
@@ -158,99 +187,136 @@ export default function RequestScreen() {
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+    <ThemedView style={styles.container}>
+      <View style={[
+        styles.searchContainer,
+        { 
+          backgroundColor: Colors[colorScheme].searchBackground,
+          borderColor: Colors[colorScheme].border,
+        }
+      ]}>
+        <Ionicons 
+          name="search" 
+          size={20} 
+          color={Colors[colorScheme].icon} 
+          style={styles.searchIcon} 
+        />
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            { color: Colors[colorScheme].text }
+          ]}
           placeholder="Search requests..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           clearButtonMode="while-editing"
-          placeholderTextColor="#666"
+          placeholderTextColor={Colors[colorScheme].placeholder}
         />
       </View>
       
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#106ebe" />
-        </View>
+        <ThemedView style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
+        </ThemedView>
       ) : (
         <FlatList
           data={filteredRequests}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.requestCard}
+              style={[
+                styles.requestCard,
+                { 
+                  backgroundColor: Colors[colorScheme].cardBackground,
+                  borderColor: Colors[colorScheme].border,
+                  shadowColor: Colors[colorScheme].shadowColor,
+                }
+              ]}
               onPress={() => handleRequestPress(item)}
               onLongPress={() => deleteRequest(item.id, item.requesterUID)}
             >
               <View style={styles.requestHeader}>
-                <Text style={styles.requestTitle}>{item.title}</Text>
-                <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
-                  <Text style={styles.statusText}>{item.status}</Text>
+                <Text style={[
+                  styles.requestTitle,
+                  { color: Colors[colorScheme].titleColor }
+                ]}>
+                  {item.title}
+                </Text>
+                <View style={getStatusStyle(item.status)}>
+                  <Text style={[
+                    styles.statusText,
+                    { color: getStatusTextColor(item.status) }
+                  ]}>
+                    {item.status}
+                  </Text>
                 </View>
               </View>
-              <Text style={styles.requestDetails}>{item.name}</Text>
-              <Text style={styles.technician}>{item.technician || 'Unassigned'}</Text>
-              <Text style={styles.requestDetails}>Priority: {item.priority}</Text>
-              <Text style={styles.requestDate}>
+              <Text style={[
+                styles.requestDetails,
+                { color: Colors[colorScheme].subtitleColor }
+              ]}>
+                {item.name}
+              </Text>
+              <Text style={[
+                styles.technician,
+                { color: Colors[colorScheme].technicianColor }
+              ]}>
+                {item.technician || 'Unassigned'}
+              </Text>
+              <Text style={[
+                styles.requestDetails,
+                { color: Colors[colorScheme].subtitleColor }
+              ]}>
+                Priority: {item.priority}
+              </Text>
+              <Text style={[
+                styles.requestDate,
+                { color: Colors[colorScheme].dateColor }
+              ]}>
                 {item.date?.toDate?.()?.toLocaleString() || 'No date'}
               </Text>
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+            <ThemedView style={styles.emptyContainer}>
+              <Text style={[
+                styles.emptyText,
+                { color: Colors[colorScheme].emptyStateColor }
+              ]}>
                 {isAdmin
                   ? "No requests found in the system"
                   : "You haven't submitted any requests yet"}
               </Text>
-            </View>
+            </ThemedView>
           }
         />
       )}
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    backgroundColor: "#106ebe",
-    padding: 15,
-    paddingTop: Platform.OS === 'ios' ? 50 : 15,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: "white",
     margin: 10,
     padding: 10,
     borderRadius: 8,
-    shadowColor: "#000",
+    borderWidth: 1,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -272,11 +338,10 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   requestCard: {
-    backgroundColor: "white",
     padding: 15,
     marginBottom: 10,
     borderRadius: 8,
-    shadowColor: "#000",
+    borderWidth: 1,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -294,46 +359,24 @@ const styles = StyleSheet.create({
   requestTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#106ebe",
     flex: 1,
   },
   requestDetails: {
     fontSize: 14,
-    color: "#666",
     marginBottom: 4,
   },
   technician: {
     fontSize: 14,
-    color: "#333",
     marginBottom: 4,
     fontWeight: "500",
   },
   requestDate: {
     fontSize: 12,
-    color: "#999",
     marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-  },
-  statusOpen: {
-    backgroundColor: "#e3f2fd",
-  },
-  statusClosed: {
-    backgroundColor: "#ffebee",
-  },
-  statusResolved: {
-    backgroundColor: "#e8f5e9",
-  },
-  statusUnassigned: {
-    backgroundColor: "#fff3e0",
   },
   emptyContainer: {
     flex: 1,
@@ -343,16 +386,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#666",
   },
   errorText: {
-    color: '#dc3545',
     fontSize: 16,
     marginBottom: 16,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#106ebe',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
