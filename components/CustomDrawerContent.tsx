@@ -8,11 +8,16 @@ import { Image, View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getAuth, signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
+import { ThemedText } from "@/components/themedText";
+import { ThemedView } from "@/components/themedView";
+import { Colors } from "@/constants/colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 export default function CustomDrawerContent(props: any) {
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
   const auth = getAuth();
+  const colorScheme = useColorScheme() ?? "light";
 
   const [userEmail, setUserEmail] = useState("");
   const [displayName, setDisplayName] = useState("User");
@@ -22,11 +27,9 @@ export default function CustomDrawerContent(props: any) {
     if (currentUser) {
       const email = currentUser.email || "";
       setUserEmail(email);
-
       setDisplayName(currentUser.displayName || email.split("@")[0] || "User");
     }
-
-    
+        
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         const email = user.email || "";
@@ -37,7 +40,7 @@ export default function CustomDrawerContent(props: any) {
         setDisplayName("User");
       }
     });
-
+    
     return () => unsubscribe();
   }, []);
 
@@ -46,34 +49,76 @@ export default function CustomDrawerContent(props: any) {
       await signOut(auth);
       router.replace("/");
     } catch (error) {
-
+      console.error("Sign out error:", error);
     }
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <DrawerContentScrollView {...props}>
-        <View style={{ alignItems: "center", paddingVertical: 20 }}>
+    <ThemedView style={{ flex: 1 }}>
+      <DrawerContentScrollView 
+        {...props}
+        contentContainerStyle={{
+          backgroundColor: Colors[colorScheme].background
+        }}
+      >
+        <ThemedView style={{ alignItems: "center", paddingVertical: 20 }}>
           <Image
             source={require("../assets/Profile.png")}
-            style={{ width: 80, height: 80, borderRadius: 40 }}
+            style={{ 
+              width: 80, 
+              height: 80, 
+              borderRadius: 40,
+              borderWidth: 2,
+              borderColor: Colors[colorScheme].border
+            }}
           />
-          <Text style={{ fontSize: 16, fontWeight: "bold", marginTop: 10 }}>
+          <ThemedText style={{ 
+            fontSize: 16, 
+            fontWeight: "bold", 
+            marginTop: 10,
+            color: Colors[colorScheme].text
+          }}>
             {displayName}
-          </Text>
-          <Text style={{ fontSize: 14, color: "#fff" }}>{userEmail}</Text>
-        </View>
-
+          </ThemedText>
+          <ThemedText style={{ 
+            fontSize: 14, 
+            color: Colors[colorScheme].subtitleColor,
+            opacity: 0.8
+          }}>
+            {userEmail}
+          </ThemedText>
+        </ThemedView>
+        
         <DrawerItemList {...props} />
       </DrawerContentScrollView>
-
-      <View style={{ borderTopWidth: 1, borderTopColor: "#ccc", padding: 10 }}>
+      
+      <ThemedView style={{ 
+        borderTopWidth: 1, 
+        borderTopColor: Colors[colorScheme].border, 
+        padding: 10 
+      }}>
         <DrawerItem
           label="Sign Out"
           onPress={handleSignOut}
-          labelStyle={{ color: "#106ebe", fontWeight: "bold" }}
+          labelStyle={{ 
+            color: Colors[colorScheme].primary, 
+            fontWeight: "bold" 
+          }}
+          icon={({ size }) => (
+            <View style={{
+              width: size,
+              height: size,
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <Text style={{ 
+                color: Colors[colorScheme].primary,
+                fontSize: 16
+              }}>⏻</Text>
+            </View>
+          )}
         />
-      </View>
-    </View>
+      </ThemedView>
+    </ThemedView>
   );
 }

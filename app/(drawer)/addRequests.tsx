@@ -6,15 +6,27 @@ import {
   Platform,
   ScrollView, StyleSheet,
   TextInput, TouchableOpacity,
-  View, ActivityIndicator, FlatList
+  View, ActivityIndicator, FlatList, Image
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import * as DocumentPicker from 'expo-document-picker';
 import { ThemedText } from "@/components/themedText";
 import { ThemedView } from "@/components/themedView";
 import { Colors } from "@/constants/colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { createRequest, updateRequest, getRequestById } from '../../requestService';
 import { useAuth } from "@/context/authContext";
+import { uploadToCloudinary, deleteFromCloudinary } from '../../cloudinaryService';
+
+interface AttachmentData {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  cloudinaryUrl: string;
+  cloudinaryPublicId: string;
+  uploadedAt: Date;
+}
 
 interface RequestDetails {
   id?: string;
@@ -25,6 +37,7 @@ interface RequestDetails {
   priority: string;
   site: string;
   requesterUID?: string;
+  attachments?: AttachmentData[];
 }
 
 export default function RequestDetailsScreen() {
@@ -38,12 +51,14 @@ export default function RequestDetailsScreen() {
   
   const [isLoading, setIsLoading] = useState<boolean>(requestId ? true : false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [openTechnician, setOpenTechnician] = useState<boolean>(false);
   const [openStatus, setOpenStatus] = useState<boolean>(false);
   const [openPriority, setOpenPriority] = useState<boolean>(false);
   const [openSite, setOpenSite] = useState<boolean>(false);
   const [showRequesterSuggestions, setShowRequesterSuggestions] = useState<boolean>(false);
   const [filteredRequesters, setFilteredRequesters] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   
   const possibleRequesters: string[] = [
     "knkansah", "Datsbe", "Onyarko", "Kosei", "Pbekoe", "Sashley",
@@ -58,6 +73,7 @@ export default function RequestDetailsScreen() {
     status: "Open",
     priority: "Low [ ** User only **]",
     site: "",
+    attachments: [],
   });
 
   useEffect(() => {
@@ -76,7 +92,9 @@ export default function RequestDetailsScreen() {
               priority: requestData.priority || "Low [ ** User only **]",
               site: requestData.site || "",
               requesterUID: requestData.requesterUID || "",
+              attachments: requestData.attachments || [],
             });
+            setAttachments(requestData.attachments || []);
           } else {
             Alert.alert("Error", "Request not found");
             router.back();
@@ -119,6 +137,100 @@ export default function RequestDetailsScreen() {
     setRequestDetails(prev => ({ ...prev, requester }));
     setShowRequesterSuggestions(false);
   };
+
+  const handleFileUpload = async () => {
+    try {
+      setIsUploading(true);
+      
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf', 'text/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const file = result.assets[0];
+        
+        // Check file size (limit to 10MB)
+        if (file.size && file.size > 10 * 1024 * 1024) {
+          Alert.alert('Error', 'File size must be less than 10MB');
+          return;
+        }
+
+        // Upload to Cloudinary
+        const cloudinaryResponse = await uploadToCloudinary(file);
+        
+        if (cloudinaryResponse.success) {
+          const newAttachment: AttachmentData = {
+            id: Date.now().toString(),
+            fileName: file.name,
+            fileType: file.mimeType || 'unknown',
+            fileSize: file.size || 0,
+            cloudinaryUrl: cloudinaryResponse.url||'',
+            cloudinaryPublicId: cloudinaryResponse.public_id||'',
+            uploadedAt: new Date(),
+          };
+
+          setAttachments(prev => [...prev, newAttachment]);
+          Alert.alert('Success', 'File uploaded successfully');
+        } else {
+          Alert.alert('Error', 'Failed to upload file');
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      Alert.alert('Error', 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveAttachment = async (attachment: AttachmentData) => {
+    Alert.alert(
+      'Remove Attachment',
+      `Are you sure you want to remove ${attachment.fileName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Delete from Cloudinary
+              await deleteFromCloudinary(attachment.cloudinaryPublicId);
+              
+              // Remove from local state
+              setAttachments(prev => prev.filter(item => item.id !== attachment.id));
+              
+              Alert.alert('Success', 'Attachment removed successfully');
+            } catch (error) {
+              console.error('Error removing attachment:', error);
+              Alert.alert('Error', 'Failed to remove attachment');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderAttachment = ({ item }: { item: AttachmentData }) => (
+    <View style={[styles.attachmentItem, { backgroundColor: Colors[colorScheme].backgroundTint }]}>
+      <View style={styles.attachmentInfo}>
+        <ThemedText style={styles.attachmentName} numberOfLines={1}>
+          {item.fileName}
+        </ThemedText>
+        <ThemedText style={styles.attachmentSize}>
+          {(item.fileSize / 1024 / 1024).toFixed(2)} MB
+        </ThemedText>
+      </View>
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={() => handleRemoveAttachment(item)}
+      >
+        <ThemedText style={styles.removeButtonText}>×</ThemedText>
+      </TouchableOpacity>
+    </View>
+  );
   
   const technicianOptions = [
     { label: "Abel Uche Ekwonyeaseso", value: "Abel Uche Ekwonyeaseso" },
@@ -172,7 +284,9 @@ export default function RequestDetailsScreen() {
       priority: "Low [ ** User only **]",
       site: "",
       requesterUID: user?.uid || "",
+      attachments: [],
     });
+    setAttachments([]);
   };
 
   const handleSaveChanges = async () => {
@@ -195,6 +309,7 @@ export default function RequestDetailsScreen() {
           status: requestDetails.status,
           priority: requestDetails.priority,
           site: requestDetails.site,
+          attachments: attachments,
           updatedBy: user?.uid || '',
         };
 
@@ -219,6 +334,7 @@ export default function RequestDetailsScreen() {
           status: "Open",
           priority: requestDetails.priority,
           site: requestDetails.site,
+          attachments: attachments,
           requesterUID: user?.uid || '',
           requesterEmail: user?.email || '',
           date: new Date(),
@@ -337,6 +453,38 @@ export default function RequestDetailsScreen() {
               numberOfLines={4}
               textAlignVertical="top"
             />
+
+            {/* File Attachments Section */}
+            <View style={styles.attachmentsSection}>
+              <ThemedText style={styles.label}>Attachments</ThemedText>
+              
+              <TouchableOpacity
+                style={[
+                  styles.uploadButton,
+                  { 
+                    backgroundColor: Colors[colorScheme].backgroundTint,
+                    borderColor: Colors[colorScheme].border
+                  },
+                  isUploading && { opacity: 0.6 }
+                ]}
+                onPress={handleFileUpload}
+                disabled={isUploading}
+              >
+                <ThemedText style={styles.uploadButtonText}>
+                  {isUploading ? 'Uploading...' : '+ Add File'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {attachments.length > 0 && (
+                <FlatList
+                  data={attachments}
+                  renderItem={renderAttachment}
+                  keyExtractor={(item) => item.id}
+                  style={styles.attachmentsList}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
 
             {/* Only show Assigned to field for admins */}
             {isAdmin && (
@@ -495,7 +643,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 5
   },
- 
   textInput: {
     borderWidth: 1,
     borderRadius: 5,
@@ -507,6 +654,59 @@ const styles = StyleSheet.create({
     minHeight: 100,
     maxHeight: 200,
     textAlignVertical: "top"
+  },
+  attachmentsSection: {
+    marginTop: 20,
+  },
+  uploadButton: {
+    borderWidth: 1,
+    borderRadius: 5,
+    borderStyle: 'dashed',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  attachmentsList: {
+    maxHeight: 200,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 5,
+  },
+  attachmentInfo: {
+    flex: 1,
+  },
+  attachmentName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  attachmentSize: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  removeButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  removeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   saveButton: {
     paddingVertical: 15,

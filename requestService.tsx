@@ -15,8 +15,19 @@ import {
   FieldValue,
 } from 'firebase/firestore';
 import { db } from './lib/config/firebase';
+import { deleteFromCloudinary } from './cloudinaryService';
 
 const COLLECTION_NAME = 'requests';
+
+export interface AttachmentData {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  cloudinaryUrl: string;
+  cloudinaryPublicId: string;
+  uploadedAt: Date;
+}
 
 export interface RequestData {
   id?: string;
@@ -30,6 +41,7 @@ export interface RequestData {
   name?: string;
   requesterUID?: string;
   requesterEmail?: string;
+  attachments?: AttachmentData[];
   createdAt?: Date | Timestamp | FieldValue;
   updatedAt?: Date | Timestamp | FieldValue;
   updatedBy?: string;
@@ -47,14 +59,23 @@ export const createRequest = async (requestData: RequestData): Promise<string> =
     if (!requestData.requester || !requestData.description) {
       throw new Error('Requester and description are required fields');
     }
+    
     const requestRef = doc(collection(db, COLLECTION_NAME));
     const requestId = requestRef.id;
     
-    const fullRequestData: RequestData = {
+    const fullRequestData: any = {
       id: requestId,
-      ...requestData,
+      requester: requestData.requester,
+      description: requestData.description,
+      technician: requestData.technician || '',
       status: requestData.status || 'Open',
       priority: requestData.priority || 'Low [ ** User only **]',
+      site: requestData.site || '',
+      title: requestData.title || '',
+      name: requestData.name || '',
+      requesterUID: requestData.requesterUID || '',
+      requesterEmail: requestData.requesterEmail || '',
+      attachments: requestData.attachments || [],
       date: serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -81,7 +102,25 @@ export const getRequestById = async (requestId: string): Promise<RequestData | n
     const requestSnap = await getDoc(requestRef);
     
     if (requestSnap.exists()) {
-      return { id: requestSnap.id, ...requestSnap.data() } as RequestData;
+      const data = requestSnap.data();
+      return { 
+        id: requestSnap.id, 
+        requester: data.requester,
+        description: data.description,
+        technician: data.technician,
+        status: data.status,
+        priority: data.priority,
+        site: data.site,
+        title: data.title,
+        name: data.name,
+        requesterUID: data.requesterUID,
+        requesterEmail: data.requesterEmail,
+        attachments: data.attachments || [],
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        updatedBy: data.updatedBy,
+        date: data.date,
+      } as RequestData;
     } else {
       console.log('No such request document!');
       return null;
@@ -103,15 +142,28 @@ export const updateRequest = async (requestId: string, requestData: RequestData)
   try {
     const requestRef = doc(db, COLLECTION_NAME, requestId);
     
-    const allowedFields: (keyof RequestData)[] = ['technician', 'status', 'priority', 'site', 'updatedBy', 'updatedAt'];
-    const updatedData: Partial<RequestData> = {
+    const updatedData: any = {
       updatedAt: serverTimestamp(),
     };
     
-    for (const key of allowedFields) {
-      if (key in requestData && requestData[key] !== undefined) {
-        updatedData[key] = requestData[key];
-      }
+    // Only update allowed fields
+    if (requestData.technician !== undefined) {
+      updatedData.technician = requestData.technician;
+    }
+    if (requestData.status !== undefined) {
+      updatedData.status = requestData.status;
+    }
+    if (requestData.priority !== undefined) {
+      updatedData.priority = requestData.priority;
+    }
+    if (requestData.site !== undefined) {
+      updatedData.site = requestData.site;
+    }
+    if (requestData.attachments !== undefined) {
+      updatedData.attachments = requestData.attachments;
+    }
+    if (requestData.updatedBy !== undefined) {
+      updatedData.updatedBy = requestData.updatedBy;
     }
     
     console.log('Updating request with data:', updatedData);
@@ -123,13 +175,26 @@ export const updateRequest = async (requestId: string, requestData: RequestData)
 };
 
 /**
- * Delete a request
+ * Delete a request and its attachments
  * 
  * @param {string} requestId - The ID of the request to delete
  * @returns {Promise<void>}
  */
 export const deleteRequest = async (requestId: string): Promise<void> => {
   try {
+    // First get the request to access attachments
+    const requestData = await getRequestById(requestId);
+    
+    if (requestData?.attachments && requestData.attachments.length > 0) {
+      // Delete all attachments from Cloudinary
+      const deletePromises = requestData.attachments.map(attachment => 
+        deleteFromCloudinary(attachment.cloudinaryPublicId)
+      );
+      
+      await Promise.all(deletePromises);
+    }
+    
+    // Delete the request document
     const requestRef = doc(db, COLLECTION_NAME, requestId);
     await deleteDoc(requestRef);
   } catch (error) {
@@ -155,10 +220,27 @@ export const getAllRequests = (
     
     const unsubscribe = onSnapshot(q,
       (snapshot) => {
-        const requests = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as RequestData[];
+        const requests = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            requester: data.requester,
+            description: data.description,
+            technician: data.technician,
+            status: data.status,
+            priority: data.priority,
+            site: data.site,
+            title: data.title,
+            name: data.name,
+            requesterUID: data.requesterUID,
+            requesterEmail: data.requesterEmail,
+            attachments: data.attachments || [],
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy,
+            date: data.date,
+          } as RequestData;
+        });
         onSuccess(requests);
       },
       (error) => {
@@ -211,10 +293,27 @@ export const getFilteredRequests = (
     
     const unsubscribe = onSnapshot(q,
       (snapshot) => {
-        const requests = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as RequestData[];
+        const requests = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            requester: data.requester,
+            description: data.description,
+            technician: data.technician,
+            status: data.status,
+            priority: data.priority,
+            site: data.site,
+            title: data.title,
+            name: data.name,
+            requesterUID: data.requesterUID,
+            requesterEmail: data.requesterEmail,
+            attachments: data.attachments || [],
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy,
+            date: data.date,
+          } as RequestData;
+        });
         onSuccess(requests);
       },
       (error) => {
@@ -226,6 +325,66 @@ export const getFilteredRequests = (
     return unsubscribe;
   } catch (error) {
     console.error('Error setting up filtered request listener:', error);
+    onError(error);
+    return () => {};
+  }
+};
+
+/**
+ * Get requests by user with real-time updates
+ * 
+ * @param {string} userUID - The UID of the user
+ * @param {Function} onSuccess - Callback function for successful data retrieval
+ * @param {Function} onError - Callback function for errors
+ * @returns {Function} - Unsubscribe function to stop listening for updates
+ */
+export const getRequestsByUser = (
+  userUID: string,
+  onSuccess: (requests: RequestData[]) => void,
+  onError: (error: any) => void
+): Function => {
+  try {
+    const requestsRef = collection(db, COLLECTION_NAME);
+    const q = query(
+      requestsRef, 
+      where('requesterUID', '==', userUID),
+      orderBy('date', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(q,
+      (snapshot) => {
+        const requests = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            requester: data.requester,
+            description: data.description,
+            technician: data.technician,
+            status: data.status,
+            priority: data.priority,
+            site: data.site,
+            title: data.title,
+            name: data.name,
+            requesterUID: data.requesterUID,
+            requesterEmail: data.requesterEmail,
+            attachments: data.attachments || [],
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy,
+            date: data.date,
+          } as RequestData;
+        });
+        onSuccess(requests);
+      },
+      (error) => {
+        console.error('Error getting user requests:', error);
+        onError(error);
+      }
+    );
+    
+    return unsubscribe;
+  } catch (error) {
+    console.error('Error setting up user request listener:', error);
     onError(error);
     return () => {};
   }
